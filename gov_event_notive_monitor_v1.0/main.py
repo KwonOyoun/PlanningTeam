@@ -131,3 +131,4 @@ def collect(threshold=0, max_pages=3, include_extra=False, out_path: Path | None
         with open(p, "w", encoding="utf-8") as f:
             json.dump(result, f, ensure_ascii=False, indent=2)
     return result
+
