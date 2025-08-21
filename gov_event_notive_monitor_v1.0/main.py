@@ -9,10 +9,24 @@ from crawlers.kiat import fetch_kiat_notices
 from crawlers.keit_srome import fetch_keit_srome_notices
 from filters.healthcare import is_interesting_for_association
 from crawlers.khidi_events import fetch_khidi_events
+from crawlers.kmdia import fetch_kmdia_notices #JS
+
+from datetime import datetime #JS
 
 def collect_edu(max_pages=2, out_path: Path | None = None):
     """KHIDI 교육·행사 수집(원문링크 우선)"""
     events = [{"source":"KHIDI_EDU", **n} for n in fetch_khidi_events(max_pages=max_pages)]
+    events += [{"source":"KMDIA", "institution":"한국의료기기산업협회", **n} for n in fetch_kmdia_notices()] #JS
+
+    #JS ✅ 필터링: KMDIA가 아닌데 institution이 "한국의료기기산업협회"로 들어온 경우 제거
+    events = [
+        ev for ev in events
+        if not (
+            ev.get("institution") == "한국의료기기산업협회"
+            and ev.get("source") != "KMDIA"
+        )
+    ]
+    
     # 교육·행사는 별도 필터링 없이 전체 저장 (원하면 키워드 필터 추가 가능)
     result = {
         "count": len(events),
@@ -26,8 +40,6 @@ def collect_edu(max_pages=2, out_path: Path | None = None):
     return result
 
 # main.py 상단 근처에 추가
-from datetime import datetime
-
 def _parse_date_for_sort(s: str | None) -> datetime:
     if not s:
         return datetime.min
@@ -74,6 +86,7 @@ def collect(threshold=0, max_pages=3, include_extra=False, out_path: Path | None
     khidi = [{"source":"KHIDI",**n} for n in fetch_khidi_notices(max_pages=max_pages)]
     kiat  = [{"source":"KIAT", **n} for n in fetch_kiat_notices(max_pages=max_pages)]
     keit  = [{"source":"KEIT", **n} for n in fetch_keit_srome_notices(max_pages=1)]  # 필요 시 API 방식으로 교체
+    kmdia = [{"source": "KMDIA", "institution": "한국의료기기산업협회", **n} for n in fetch_kmdia_notices()] #JS
 
     # --- G2B 추가 ---
     try:
@@ -96,8 +109,9 @@ def collect(threshold=0, max_pages=3, include_extra=False, out_path: Path | None
     kiat_sel  = enrich_and_filter(kiat,  threshold=threshold)
     keit_sel  = enrich_and_filter(keit,  threshold=threshold)
     g2b_sel = enrich_and_filter(g2b, threshold=threshold)  # ← 추가
+    kmdia_sel = enrich_and_filter(kmdia, threshold=threshold) #JS
 
-    all_items = iris_sel + khidi_sel + kiat_sel + keit_sel + g2b_sel
+    all_items = iris_sel + khidi_sel + kiat_sel + keit_sel + g2b_sel + kmdia_sel #JS
 
     # 3) 중복 제거 (제목+날짜+링크)
     seen, dedup = set(), []
